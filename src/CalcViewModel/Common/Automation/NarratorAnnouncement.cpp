@@ -6,6 +6,7 @@
 
 using namespace CalculatorApp::Common::Automation;
 using namespace Platform;
+using namespace Windows::UI::Xaml::Automation::Peers;
 
 namespace CalculatorApp::Common::Automation
 {
@@ -22,6 +23,10 @@ namespace CalculatorApp::Common::Automation
         StringReference DisplayCopied(L"DisplayCopied");
         StringReference OpenParenthesisCountChanged(L"OpenParenthesisCountChanged");
         StringReference NoParenthesisAdded(L"NoParenthesisAdded");
+        StringReference GraphModeChanged(L"GraphModeChanged");
+        StringReference GraphViewChanged(L"GraphViewChanged");
+        StringReference FunctionRemoved(L"FunctionRemoved");
+        StringReference GraphViewBestFitChanged(L"GraphViewBestFitChanged");
     }
 }
 
@@ -138,4 +143,40 @@ NarratorAnnouncement ^ CalculatorAnnouncement::GetNoRightParenthesisAddedAnnounc
         CalculatorActivityIds::NoParenthesisAdded,
         AutomationNotificationKind::ActionCompleted,
         AutomationNotificationProcessing::ImportantMostRecent);
+}
+
+NarratorAnnouncement ^ CalculatorAnnouncement::GetGraphModeChangedAnnouncement(String ^ announcement)
+{
+    return ref new NarratorAnnouncement(
+        announcement,
+        CalculatorActivityIds::GraphModeChanged,
+        AutomationNotificationKind::ActionCompleted,
+        AutomationNotificationProcessing::ImportantMostRecent);
+}
+
+NarratorAnnouncement ^ CalculatorAnnouncement::GetGraphViewChangedAnnouncement(String ^ announcement)
+{
+    return ref new NarratorAnnouncement(
+        announcement,
+        CalculatorActivityIds::GraphViewChanged,
+        AutomationNotificationKind::ActionCompleted,
+        AutomationNotificationProcessing::MostRecent);
+}
+
+NarratorAnnouncement ^ CalculatorAnnouncement::GetFunctionRemovedAnnouncement(String ^ announcement)
+{
+    return ref new NarratorAnnouncement(
+        announcement,
+        CalculatorActivityIds::FunctionRemoved,
+        AutomationNotificationKind::ItemRemoved,
+        AutomationNotificationProcessing::MostRecent);
+}
+
+NarratorAnnouncement ^ CalculatorAnnouncement::GetGraphViewBestFitChangedAnnouncement(Platform::String ^ announcement)
+{
+    return ref new NarratorAnnouncement(
+        announcement,
+        CalculatorActivityIds::GraphViewBestFitChanged,
+        AutomationNotificationKind::ActionCompleted,
+        AutomationNotificationProcessing::MostRecent);
 }

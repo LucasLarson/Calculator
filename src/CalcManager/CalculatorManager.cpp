@@ -12,6 +12,10 @@ using namespace CalcEngine;
 static constexpr size_t MAX_HISTORY_ITEMS = 20;
 static constexpr size_t SERIALIZED_NUMBER_MINSIZE = 3;
 
+#ifndef _MSC_VER
+#define __pragma(x)
+#endif
+
 // Converts Memory Command enum value to unsigned char,
 // while ignoring Warning C4309: 'conversion' : truncation of constant value
 #define MEMORY_COMMAND_TO_UNSIGNED_CHAR(c) __pragma(warning(push)) __pragma(warning(disable : 4309)) static_cast<unsigned char>(c) __pragma(warning(pop))
@@ -29,17 +33,9 @@ namespace CalculationManager
         , m_savedDegreeMode(Command::CommandDEG)
         , m_pStdHistory(new CalculatorHistory(MAX_HISTORY_ITEMS))
         , m_pSciHistory(new CalculatorHistory(MAX_HISTORY_ITEMS))
+        , m_pHistory(nullptr)
     {
         CCalcEngine::InitialOneTimeOnlySetup(*m_resourceProvider);
-    }
-
-    /// <summary>
-    /// Destructor for CalculatorManager
-    /// Ends two CCalcEngine
-    /// </summary>
-    CalculatorManager::~CalculatorManager()
-    {
-        this->MemorizedNumberClearAll();
     }
 
     /// <summary>
@@ -80,14 +76,19 @@ namespace CalculationManager
         m_displayCallback->MemoryItemChanged(indexOfMemory);
     }
 
+    void CalculatorManager::InputChanged()
+    {
+        m_displayCallback->InputChanged();
+    }
+
     /// <summary>
     /// Call the callback function using passed in IDisplayHelper.
     /// Used to set the expression display value on ViewModel
     /// </summary>
     /// <param name="expressionString">wstring representing expression to be displayed</param>
     void CalculatorManager::SetExpressionDisplay(
-        _Inout_ shared_ptr<CalculatorVector<pair<wstring, int>>> const& tokens,
-        _Inout_ shared_ptr<CalculatorVector<shared_ptr<IExpressionCommand>>> const& commands)
+        _Inout_ shared_ptr<vector<pair<wstring, int>>> const& tokens,
+        _Inout_ shared_ptr<vector<shared_ptr<IExpressionCommand>>> const& commands)
     {
         if (!m_inHistoryItemLoadMode)
         {
@@ -245,6 +246,7 @@ namespace CalculationManager
                 m_savedCommands.push_back(MapCommandForSerialize(command));
             }
             m_savedDegreeMode = m_currentDegreeMode;
+            InputChanged();
             return;
         }
 
@@ -288,6 +290,30 @@ namespace CalculationManager
             m_currentCalculatorEngine->ProcessCommand(static_cast<OpCode>(Command::CommandINV));
             m_currentCalculatorEngine->ProcessCommand(static_cast<OpCode>(Command::CommandTANH));
             break;
+        case Command::CommandASEC:
+            m_currentCalculatorEngine->ProcessCommand(static_cast<OpCode>(Command::CommandINV));
+            m_currentCalculatorEngine->ProcessCommand(static_cast<OpCode>(Command::CommandSEC));
+            break;
+        case Command::CommandACSC:
+            m_currentCalculatorEngine->ProcessCommand(static_cast<OpCode>(Command::CommandINV));
+            m_currentCalculatorEngine->ProcessCommand(static_cast<OpCode>(Command::CommandCSC));
+            break;
+        case Command::CommandACOT:
+            m_currentCalculatorEngine->ProcessCommand(static_cast<OpCode>(Command::CommandINV));
+            m_currentCalculatorEngine->ProcessCommand(static_cast<OpCode>(Command::CommandCOT));
+            break;
+        case Command::CommandASECH:
+            m_currentCalculatorEngine->ProcessCommand(static_cast<OpCode>(Command::CommandINV));
+            m_currentCalculatorEngine->ProcessCommand(static_cast<OpCode>(Command::CommandSECH));
+            break;
+        case Command::CommandACSCH:
+            m_currentCalculatorEngine->ProcessCommand(static_cast<OpCode>(Command::CommandINV));
+            m_currentCalculatorEngine->ProcessCommand(static_cast<OpCode>(Command::CommandCSCH));
+            break;
+        case Command::CommandACOTH:
+            m_currentCalculatorEngine->ProcessCommand(static_cast<OpCode>(Command::CommandINV));
+            m_currentCalculatorEngine->ProcessCommand(static_cast<OpCode>(Command::CommandCOTH));
+            break;
         case Command::CommandFE:
             m_isExponentialFormat = !m_isExponentialFormat;
             [[fallthrough]];
@@ -295,6 +321,8 @@ namespace CalculationManager
             m_currentCalculatorEngine->ProcessCommand(static_cast<OpCode>(command));
             break;
         }
+
+        InputChanged();
     }
 
     /// <summary>
@@ -335,6 +363,7 @@ namespace CalculationManager
     {
         m_currentCalculatorEngine->PersistedMemObject(m_persistedPrimaryValue);
         m_currentCalculatorEngine->ProcessCommand(IDC_RECALL);
+        InputChanged();
     }
 
     /// <summary>
@@ -381,6 +410,7 @@ namespace CalculationManager
 
         this->MemorizedNumberSelect(indexOfMemory);
         m_currentCalculatorEngine->ProcessCommand(IDC_RECALL);
+        InputChanged();
     }
 
     /// <summary>
@@ -522,9 +552,9 @@ namespace CalculationManager
         return m_pHistory->GetHistory();
     }
 
-    vector<shared_ptr<HISTORYITEM>> const& CalculatorManager::GetHistoryItems(_In_ CALCULATOR_MODE mode)
+    vector<shared_ptr<HISTORYITEM>> const& CalculatorManager::GetHistoryItems(_In_ CalculatorMode mode)
     {
-        return (mode == CM_STD) ? m_pStdHistory->GetHistory() : m_pSciHistory->GetHistory();
+        return (mode == CalculatorMode::Standard) ? m_pStdHistory->GetHistory() : m_pSciHistory->GetHistory();
     }
 
     shared_ptr<HISTORYITEM> const& CalculatorManager::GetHistoryItem(_In_ unsigned int uIdx)
@@ -547,20 +577,20 @@ namespace CalculationManager
         m_pHistory->ClearHistory();
     }
 
-    void CalculatorManager::SetRadix(RADIX_TYPE iRadixType)
+    void CalculatorManager::SetRadix(RadixType iRadixType)
     {
         switch (iRadixType)
         {
-        case RADIX_TYPE::HEX_RADIX:
+        case RadixType::Hex:
             m_currentCalculatorEngine->ProcessCommand(IDC_HEX);
             break;
-        case RADIX_TYPE::DEC_RADIX:
+        case RadixType::Decimal:
             m_currentCalculatorEngine->ProcessCommand(IDC_DEC);
             break;
-        case RADIX_TYPE::OCT_RADIX:
+        case RadixType::Octal:
             m_currentCalculatorEngine->ProcessCommand(IDC_OCT);
             break;
-        case RADIX_TYPE::BIN_RADIX:
+        case RadixType::Binary:
             m_currentCalculatorEngine->ProcessCommand(IDC_BIN);
             break;
         default:
@@ -594,16 +624,16 @@ namespace CalculationManager
         return m_currentDegreeMode;
     }
 
-    void CalculatorManager::SetHistory(_In_ CALCULATOR_MODE eMode, _In_ vector<shared_ptr<HISTORYITEM>> const& history)
+    void CalculatorManager::SetHistory(_In_ CalculatorMode eMode, _In_ vector<shared_ptr<HISTORYITEM>> const& history)
     {
         CalculatorHistory* pHistory = nullptr;
 
         switch (eMode)
         {
-        case CM_STD:
+        case CalculatorMode::Standard:
             pHistory = m_pStdHistory.get();
             break;
-        case CM_SCI:
+        case CalculatorMode::Scientific:
             pHistory = m_pSciHistory.get();
             break;
         }
@@ -611,16 +641,16 @@ namespace CalculationManager
         if (pHistory)
         {
             pHistory->ClearHistory();
-            for (unsigned int i = 0; i < history.size(); ++i)
+            for (auto const& historyItem : history)
             {
-                pHistory->AddItem(history[i]);
+                pHistory->AddItem(historyItem);
             }
         }
     }
 
-    wstring CalculatorManager::GetResultForRadix(uint32_t radix, int32_t precision)
+    wstring CalculatorManager::GetResultForRadix(uint32_t radix, int32_t precision, bool groupDigitsPerRadix)
     {
-        return m_currentCalculatorEngine ? m_currentCalculatorEngine->GetCurrentResultForRadix(radix, precision) : L"";
+        return m_currentCalculatorEngine ? m_currentCalculatorEngine->GetCurrentResultForRadix(radix, precision, groupDigitsPerRadix) : L"";
     }
 
     void CalculatorManager::SetPrecision(int32_t precision)
@@ -640,103 +670,16 @@ namespace CalculationManager
 
     bool CalculatorManager::IsEngineRecording()
     {
-        return m_currentCalculatorEngine->FInRecordingState() ? true : false;
+        return m_currentCalculatorEngine->FInRecordingState();
+    }
+
+    bool CalculatorManager::IsInputEmpty()
+    {
+        return m_currentCalculatorEngine->IsInputEmpty();
     }
 
     void CalculatorManager::SetInHistoryItemLoadMode(_In_ bool isHistoryItemLoadMode)
     {
         m_inHistoryItemLoadMode = isHistoryItemLoadMode;
-    }
-
-    /// <summary>
-    /// Serialize Rational to vector of long
-    /// How Rational is serialized :
-    ///     Serialized Rational.P(Number) + Serialized Rational.Q(Number)
-    /// How Number is saved :
-    ///     [0] = Rational.P.Sign
-    ///     [1] = Rational.P.Mantissa.size
-    ///     [2] = Rational.P.Exp
-    ///     [3] = Rational.P.Mantissa[0]
-    ///     [4] = Rational.P.Mantissa[1]
-    ///       ...
-    ///     [2 + Rational.P.Mantissa.size] = Rational.P.Mantissa[size - 1]
-    /// </summary>
-    /// <param name = "rat">Rational number to be serialized</param>
-    vector<long> CalculatorManager::SerializeRational(Rational const& rat)
-    {
-        vector<long> serializedRational{};
-
-        auto serialP = SerializeNumber(rat.P());
-        serializedRational.insert(serializedRational.end(), serialP.begin(), serialP.end());
-
-        auto serialQ = SerializeNumber(rat.Q());
-        serializedRational.insert(serializedRational.end(), serialQ.begin(), serialQ.end());
-
-        return serializedRational;
-    }
-
-    /// <summary>
-    /// DeserializeRational vector and construct a Rational
-    /// How Rational is serialized :
-    ///     Serialized Rational.P(Number) + Serialized Rational.Q(Number)
-    /// </summary>
-    Rational CalculatorManager::DeSerializeRational(vector<long>::const_iterator itr)
-    {
-        auto p = DeSerializeNumber(itr);
-        auto q = DeSerializeNumber(itr + SERIALIZED_NUMBER_MINSIZE + p.Mantissa().size());
-
-        return Rational(p, q);
-    }
-
-    /// <summary>
-    /// Serialize Number to vector of long
-    /// How Number is saved :
-    ///     [0] = Number.Sign
-    ///     [1] = Number.Mantissa.size
-    ///     [2] = Number.Exp
-    ///     [3] = Number.Mantissa[0]
-    ///     [4] = Number.Mantissa[1]
-    ///       ...
-    ///     [2 + Number.Mantissa.size] = Number.Mantissa[size - 1]
-    /// </summary>
-    /// <param name = "num">Number to be serialized</param>
-    vector<long> CalculatorManager::SerializeNumber(Number const& num)
-    {
-        vector<long> serializedNumber{};
-
-        serializedNumber.push_back(num.Sign());
-        serializedNumber.push_back(static_cast<long>(num.Mantissa().size()));
-        serializedNumber.push_back(num.Exp());
-        for (auto const& digit : num.Mantissa())
-        {
-            serializedNumber.push_back(digit);
-        }
-
-        return serializedNumber;
-    }
-
-    /// <summary>
-    /// DeserializeNumber vector and construct a Number
-    /// How Number is saved :
-    ///     [0] = Number.Sign
-    ///     [1] = Number.Mantissa.size
-    ///     [2] = Number.Exp
-    ///     [3] = Number.Mantissa[0]
-    ///     [4] = Number.Mantissa[1]
-    ///       ...
-    ///     [2 + Number.Mantissa.size] = Number.Mantissa[size - 1]
-    /// </summary>
-    Number CalculatorManager::DeSerializeNumber(vector<long>::const_iterator itr)
-    {
-        int32_t sign = *itr;
-        uint32_t size = *(itr + 1);
-        int32_t exp = *(itr + 2);
-        vector<uint32_t> mant{};
-        for (size_t i = 0; i < size; ++i)
-        {
-            mant.emplace_back(*(itr + 3 + i));
-        }
-
-        return Number{ sign, exp, mant };
     }
 }

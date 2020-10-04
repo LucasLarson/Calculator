@@ -15,6 +15,8 @@ namespace CalculatorApp
 
     namespace ViewModel
     {
+        ref class StandardCalculatorViewModel;
+
     public
         delegate void HideHistoryClickedHandler();
     public
@@ -41,11 +43,11 @@ namespace CalculatorApp
             event HistoryItemClickedHandler ^ HistoryItemClicked;
             void ShowItem(_In_ CalculatorApp::ViewModel::HistoryItemViewModel ^ e);
             void ClearHistory();
-            void RestoreCompleteHistory();
 
             internal : HistoryViewModel(_In_ CalculationManager::CalculatorManager* calculatorManager);
             void SetCalculatorDisplay(CalculatorDisplay& calculatorDisplay);
             void ReloadHistory(_In_ CalculatorApp::Common::ViewMode currentMode);
+            unsigned long long GetMaxItemSize();
 
             void DeleteItem(_In_ CalculatorApp::ViewModel::HistoryItemViewModel ^ e);
 
@@ -56,19 +58,17 @@ namespace CalculatorApp
         private:
             CalculationManager::CalculatorManager* const m_calculatorManager;
             CalculatorDisplay m_calculatorDisplay;
-            CalculationManager::CALCULATOR_MODE m_currentMode;
+            CalculationManager::CalculatorMode m_currentMode;
             Platform::String ^ m_localizedHistoryCleared;
 
-            void RestoreHistory(_In_ CalculationManager::CALCULATOR_MODE cMode);
+            void RestoreHistory(_In_ CalculationManager::CalculatorMode cMode);
             CalculationManager::HISTORYITEM
             DeserializeHistoryItem(_In_ Platform::String ^ historyItemKey, _In_ Windows::Storage::ApplicationDataContainer ^ historyContainer);
-            Windows::Storage::ApplicationDataContainer ^ GetHistoryContainer(_In_ CalculationManager::CALCULATOR_MODE cMode);
-            Platform::String ^ GetHistoryContainerKey(_In_ CalculationManager::CALCULATOR_MODE cMode);
-            void ClearHistoryContainer(_In_ CalculationManager::CALCULATOR_MODE cMode);
-            void UpdateHistoryVectorLength(_In_ int newValue, _In_ CalculationManager::CALCULATOR_MODE cMode);
+            Windows::Storage::ApplicationDataContainer ^ GetHistoryContainer(_In_ CalculationManager::CalculatorMode cMode);
+            Platform::String ^ GetHistoryContainerKey(_In_ CalculationManager::CalculatorMode cMode);
+            void ClearHistoryContainer(_In_ CalculationManager::CalculatorMode cMode);
+            void UpdateHistoryVectorLength(_In_ int newValue, _In_ CalculationManager::CalculatorMode cMode);
             bool IsValid(_In_ CalculationManager::HISTORYITEM item);
-
-            void MakeHistoryClearedNarratorAnnouncement(Platform::String ^ resourceKey, Platform::String ^ &formatVariable);
 
             friend class CalculatorDisplay;
             void UpdateItemSize();
